@@ -1,0 +1,469 @@
+git is a database
+git is a content-addressable database
+
+everything is stored as objects identified by a hash (based on content, not filename)
+same content → same hash → no duplication
+the fundamental unit of that db is a commit
+this is why git is fast and space-efficient
+
+Commit
+a commit is a snapshot of the entire project at one moment in time
+
+important nuance:
+git does NOT literally copy every file every time
+it reuses unchanged data internally (via trees/blobs)
+
+every commit contains 3 things:
+snapshot
+full state of all tracked files (via tree objects)
+
+metadata
+author
+timestamp
+commit message
+parent(s)
+
+pointer to previous commit
+normal commit → 1 parent
+merge commit → 2 parents
+all commits point to their parent commits
+commits always point backwards
+
+this creates a Directed Acyclic Graph
+directed → commits point to parents
+acyclic → no loops possible
+graph → branching history
+
+a parent can have multiple children → happens when branches diverge
+
+Branch
+a branch is just a pointer to a commit
+internally: a file storing a commit hash
+example:
+main → a1b2c3d
+
+branches do NOT contain commits
+they are just labels for "latest commit in this line of work"
+
+when you commit:
+git creates a new commit
+moves the current branch pointer forward
+this is why branching is cheap in git (no copying)
+
+HEAD
+HEAD is a pointer that tracks your current location
+
+usually:
+HEAD → branch → commit
+
+$ git checkout feature
+HEAD now points to feature
+
+detached HEAD
+
+$ git checkout <commit-id>
+
+HEAD points directly to a commit
+not a branch
+
+if you commit now:
+new commits are not attached to any branch
+they can be lost (garbage collected)
+
+this is useful for:
+exploring old history
+testing something temporarily
+
+3 areas where code lives
+working directory → actual files on disk
+staging area (index) → what will go into next commit
+repository (.git) → permanent history
+
+flow:
+working → staging → repo
+
+key idea:
+git lets you control exactly what goes into a commit via staging
+checkout
+$ git checkout main
+$ git checkout <commit-id>
+
+moves HEAD
+updates working directory to match that snapshot
+does NOT change history
+
+you are just "looking at" a different point in time
+
+reset
+reset moves a branch pointer (and optionally your files)
+
+$ git reset <commit-id>
+
+commits ahead of that point:
+still exist in database
+but no branch points to them → orphaned
+modes
+
+--soft
+moves branch only
+keeps staging + working directory
+use: squash/combine commits
+
+--mixed (default)
+moves branch
+clears staging
+keeps working directory
+use: re-stage changes differently
+
+--hard
+moves branch
+clears staging AND working directory
+resets files to that commit
+use: discard everything
+
+revert
+$ git revert <commit-id>
+creates a NEW commit that reverses changes
+does NOT delete history
+
+use when:
+working in shared repo
+cannot rewrite history safely
+
+merge vs rebase
+
+merge
+$ git merge <branch>
+joins two histories
+creates a merge commit
+preserves exact history (non-linear)
+rebase
+
+$ git rebase main
+takes your commits
+replays them on top of another base
+
+result:
+linear history
+cleaner log
+
+tradeoff:
+rewrites commit hashes
+
+rule:
+don’t rebase commits that others might be using
+
+reflog
+$ git reflog
+tracks every place HEAD has pointed
+this includes:
+commits
+resets
+checkouts
+even "lost" commits show up here
+
+recovery:
+$ git reset --hard <commit-id>
+$ git reset --hard HEAD@{1}
+
+expiry:
+reachable → ~90 days
+orphaned → ~30 days
+this is basically your undo history
+
+git vs hosting services
+git = local version control system
+
+hosting platforms:
+GitHub
+GitLab
+Gitea
+
+they add:
+remote storage
+collaboration
+pull requests
+access control
+basic commands
+
+$ git --version
+check installed version
+
+$ git status
+see current state (staged, unstaged, branch)
+
+$ git init
+initialize a repo (.git folder)
+
+config:
+
+$ git config --global user.email "email"
+$ git config --global user.name "name"
+
+workflow
+
+$ git init
+create repo
+
+$ git add <file>
+move changes to staging
+
+$ git commit -m "message"
+save snapshot
+
+$ git push
+send commits to remote
+
+logs
+$ git log
+full history
+
+$ git log --oneline
+compact history
+useful for navigating commits quickly
+
+good commits
+atomic commits:
+one logical change per commit
+easier debugging and reverting
+
+commit messages:
+
+present tense
+imperative
+example: "fix login bug", "add validation"
+inspect internals
+
+$ git show -s --pretty=raw <commit-id>
+→ full commit object (tree, parent, metadata)
+
+$ git ls-tree <commit-id>
+→ lists files (blobs) in snapshot
+
+$ git show <blob-id>
+→ view file contents
+
+$ git cat-file -p <commit-id>
+→ raw git object
+this is where you see git as a database, not just a tool
+
+branches
+
+$ git branch
+list branches
+
+$ git branch <name>
+create branch
+
+$ git switch <branch>
+switch (or create with -c)
+
+$ git checkout <branch>
+older way to switch
+
+you only see files from the current branch
+because working directory reflects that branch’s commit
+
+diff
+$ git diff --staged
+staged vs last commit
+
+$ git diff <branch1> <branch2>
+compare branches
+
+output:
+what changed
+line-by-line differences
+stash
+
+temporary storage for uncommitted changes
+
+use when:
+you need to switch branches
+but aren’t ready to commit
+
+$ git stash
+name it:
+$ git stash save "message"
+
+list:
+$ git stash list
+
+apply:
+$ git stash apply
+
+remove:
+$ git stash drop
+$ git stash clear
+
+tags
+tags mark important commits (like releases)
+
+$ git tag <tag-name>
+
+annotated:
+$ git tag -a <name> -m "message"
+
+list:
+$ git tag
+
+tag specific commit:
+$ git tag <name> <commit-id>
+
+conflicts (merge / rebase)
+
+happen when:
+same part of file changed differently
+
+git:
+pauses operation
+asks you to resolve manually
+
+after fixing:
+mark resolved
+continue merge/rebase
+recovery using reflog
+
+$ git reflog
+find lost commit
+
+$ git reset --hard <commit-id>
+
+or:
+$ git reset --hard HEAD@{n}
+
+this works even after resets, rebases, deletes
+
+Remotes 
+a remote is a connection between your local Git repository and a hosted repository on GitHub (or similar services)
+it allows you to:
+store code online
+collaborate with others
+sync changes between local and remote
+
+default remote name:
+origin
+
+add a remote:
+$ git remote add origin <repo-url>
+
+view remotes:
+$ git remote -v
+shows fetch and push URLs
+
+remove remote:
+$ git remote remove origin
+
+change remote URL:
+$ git remote set-url origin <new-url>
+
+Clone 
+clone creates a local copy of a remote repository
+
+$ git clone <repo-url>
+this:
+downloads all history
+sets up remote automatically
+checks out default branch
+used instead of git init when starting from an existing project
+
+Fetch vs Pull 
+
+fetch:
+$ git fetch
+downloads changes from remote
+does NOT modify working directory
+
+pull:
+$ git pull
+fetch + merge
+downloads and applies changes
+
+use:
+fetch → when you want to inspect changes first
+pull → when you want to update immediately
+
+Push 
+push sends local commits to remote repository
+$ git push
+first push requires upstream:
+$ git push -u origin main
+
+this:
+pushes branch
+links local branch to remote branch
+after this:
+$ git push
+works without specifying branch
+
+Upstream Branch 
+an upstream branch is the default remote branch your local branch tracks
+
+set using:
+$ git push -u origin main
+
+check:
+$ git branch -vv
+
+benefit:
+no need to type branch name repeatedly
+
+Merge Abort 
+if a merge causes problems, it can be cancelled
+$ git merge --abort
+restores state before merge started
+
+Diff Output 
+diff shows line-by-line changes
+
+example output:
+--- old version
++++ new version
+
+line removed
+line added
+use:
+$ git diff --staged → staged vs last commit
+$ git diff <branch1> <branch2> → compare branches
+
+Reflog 
+reflog shows history of HEAD movements
+
+$ git reflog
+includes:
+commits
+resets
+checkouts
+deleted references
+
+used for recovery:
+$ git reset --hard HEAD@{1}
+
+note:
+reflog does NOT take commit id as argument
+
+Tags 
+list tags:
+$ git tag
+(not "git tags")
+tags are used for marking important versions (releases)
+
+lightweight tag:
+just a pointer
+annotated tag:
+includes metadata and message
+
+Working with Empty Folders
+git does NOT track empty directories
+solution:
+add a placeholder file like:
+.gitkeep
+this forces git to track the folder
+
+.gitignore 
+.gitignore specifies files that git should NOT track
+common examples:
+venv/
+pycache/
+.env
+prevents unnecessary or sensitive files from being committed
