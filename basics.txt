@@ -1,25 +1,3 @@
-all your monitoring logs shouldnt be stored in suhc  a place tha u contantly need 
-to ssh into the server to view them
-Prometheus
-stores data in a time series manner
-extracts logs from application and stires them in a time series
-with a specified interval window throughout wichih data is scraped
-
-works on a pull architecture
-
-architecture
-in the linux machine:
-applications stored 
-node exporter: node matrics; cpu usage, and node specific metrics
-
-for any application written, there needs to be some code to expose the metrics to an endpoint
-can be http endpoint
-
-promethues can be started on the same machine or a diff metrics
-it is the thing that scrapes metrics from the maching and stores in a time series format
-it should be ideally run on a diff machine
-
-
 git is a database
 
 Commit:
